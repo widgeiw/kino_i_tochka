@@ -43,3 +43,45 @@ class MovieAPITests(unittest.IsolatedAsyncioTestCase):
                 await self.request_with(lambda r: httpx.Response(200, json=payload))
         with self.assertRaises(BackendError):
             await self.request_with(lambda r: httpx.Response(200, text="not json"))
+
+    async def test_movie_details_contract(self):
+        def handler(request):
+            self.assertEqual(request.url.path, "/api/v1/movies/157336")
+            return httpx.Response(200, json={
+                "id": 157336, "title": "Интерстеллар", "overview": "Описание",
+                "vote_average": 8.4, "genres": ["Фантастика"], "runtime": 169,
+                "poster_url": None, "release_date": "2014-11-05",
+            })
+        async with httpx.AsyncClient(
+            trust_env=False, base_url="http://backend:8000",
+            transport=httpx.MockTransport(handler),
+        ) as client:
+            movie = await MovieAPI(client).movie_details(157336)
+        self.assertEqual(movie.runtime, 169)
+        self.assertIsNone(movie.poster_url)
+
+    async def test_movie_details_error_and_invalid_data(self):
+        for response in (httpx.Response(404), httpx.Response(200, json={}),
+                         httpx.Response(200, text="invalid json")):
+            async with httpx.AsyncClient(
+                trust_env=False, base_url="http://backend:8000",
+                transport=httpx.MockTransport(lambda r: response),
+            ) as client:
+                with self.assertRaises(BackendError):
+                    await MovieAPI(client).movie_details(1)
+
+
+class MovieCardTests(unittest.TestCase):
+    def test_missing_fields_and_long_description(self):
+        from bot.movie_card import MovieDetail, format_movie_card
+        movie = MovieDetail(id=1, title="Фильм", overview="", vote_average=0, genres=[])
+        text = format_movie_card(movie)
+        self.assertIn("год неизвестен", text)
+        self.assertIn("Описание отсутствует", text)
+        movie.overview = "🎬" * 10000
+        self.assertLessEqual(len(format_movie_card(movie).encode("utf-16-le")) // 2, 4096)
+
+    def test_selection_buttons_use_movie_id(self):
+        from bot.keyboards import movie_selection_keyboard
+        keyboard = movie_selection_keyboard([{"id": 157336, "title": "Фильм"}])
+        self.assertEqual(keyboard.inline_keyboard[0][0].callback_data, "movie:157336")

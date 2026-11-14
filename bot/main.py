@@ -6,11 +6,13 @@ import httpx
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
+from aiogram.exceptions import TelegramBadRequest
 from dotenv import load_dotenv
 
 from bot.api_client import BackendError, MovieAPI
-from bot.keyboards import main_keyboard
+from bot.keyboards import main_keyboard, movie_selection_keyboard
+from bot.movie_card import format_movie_card
 from bot.states import SearchStates
 
 
@@ -106,8 +108,34 @@ async def movie_title_handler(message: Message, state: FSMContext, movie_api: Mo
         date = movie.get("release_date")
         year = date[:4] if isinstance(date, str) and date else "год неизвестен"
         lines.append(f"{index}. {movie['title'][:120]} ({year})")
-    await message.answer("\n".join(lines), reply_markup=main_keyboard)
+    await message.answer("\n".join(lines), reply_markup=movie_selection_keyboard(data["results"]))
     await state.clear()
+
+
+@dp.callback_query(F.data.startswith("movie:"))
+async def movie_selected_handler(callback: CallbackQuery, movie_api: MovieAPI):
+    # Убираем индикатор ожидания до сетевого запроса.
+    await callback.answer()
+    if not isinstance(callback.message, Message):
+        return
+    raw_id = callback.data.removeprefix("movie:")
+    if not raw_id.isascii() or not raw_id.isdigit() or len(raw_id) > 12 or int(raw_id) <= 0:
+        await callback.message.answer("Некорректный выбор. Выполни поиск заново.")
+        return
+    try:
+        movie = await movie_api.movie_details(int(raw_id))
+    except BackendError as exc:
+        await callback.message.answer(str(exc))
+        return
+
+    # Текст отправляем отдельно: длинное описание не поместится в подпись к фото.
+    await callback.message.answer(format_movie_card(movie), reply_markup=main_keyboard)
+    if movie.poster_url and movie.poster_url.startswith("https://"):
+        try:
+            await callback.message.answer_photo(movie.poster_url)
+        except TelegramBadRequest:
+            # Карточка уже показана, даже если Telegram не смог загрузить постер.
+            await callback.message.answer("Постер недоступен.")
 
 
 @dp.message(SearchStates.waiting_for_title)
