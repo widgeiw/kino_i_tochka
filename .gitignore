@@ -1,0 +1,16 @@
+# Секреты
+.env
+.env.*
+
+# Виртуальное окружение
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+!.env.example
+!**/.env.example
+
+.vscode/
