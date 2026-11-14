@@ -35,6 +35,10 @@ class MovieAPI:
             data = response.json()
             if not isinstance(data, dict) or not isinstance(data.get("results"), list):
                 raise ValueError("Invalid search response")
+            if (type(data.get("page")) is not int or not 1 <= data["page"] <= 500
+                    or type(data.get("total_pages")) is not int or data["total_pages"] < 0
+                    or (data["results"] and data["total_pages"] < data["page"])):
+                raise ValueError("Invalid pagination")
             for movie in data["results"]:
                 if (not isinstance(movie, dict)
                         or not isinstance(movie.get("title"), str)

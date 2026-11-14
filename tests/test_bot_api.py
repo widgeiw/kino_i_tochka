@@ -17,12 +17,23 @@ class MovieAPITests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(request.url.path, "/api/v1/movies/search")
             self.assertEqual(request.url.params["query"], "Интерстеллар & кино")
             self.assertEqual(request.url.params["page"], "1")
-            return httpx.Response(200, json={"results": [{"id": 1, "title": "Фильм"}]})
+            return httpx.Response(200, json={"page": 1, "total_pages": 1, "results": [{"id": 1, "title": "Фильм"}]})
         data = await self.request_with(handler, "Интерстеллар & кино")
         self.assertEqual(data["results"][0]["id"], 1)
 
+    async def test_second_page_contract(self):
+        def handler(request):
+            self.assertEqual(request.url.params["page"], "2")
+            return httpx.Response(200, json={"page": 2, "total_pages": 3, "results": []})
+        async with httpx.AsyncClient(
+            trust_env=False, base_url="http://backend:8000",
+            transport=httpx.MockTransport(handler),
+        ) as client:
+            data = await MovieAPI(client).search_movies("Бэтмен", 2)
+        self.assertEqual(data["page"], 2)
+
     async def test_empty_results(self):
-        data = await self.request_with(lambda r: httpx.Response(200, json={"results": []}))
+        data = await self.request_with(lambda r: httpx.Response(200, json={"page": 1, "total_pages": 0, "results": []}))
         self.assertEqual(data["results"], [])
 
     async def test_http_errors(self):
@@ -84,4 +95,4 @@ class MovieCardTests(unittest.TestCase):
     def test_selection_buttons_use_movie_id(self):
         from bot.keyboards import movie_selection_keyboard
         keyboard = movie_selection_keyboard([{"id": 157336, "title": "Фильм"}])
-        self.assertEqual(keyboard.inline_keyboard[0][0].callback_data, "movie:157336")
+        self.assertEqual(keyboard.inline_keyboard[0][0].callback_data, "movie::157336")
