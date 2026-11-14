@@ -1,0 +1,39 @@
+# Telegram-бот: локальный запуск
+
+Команды PowerShell выполняются из корня проекта. Нужен Python 3.10+.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt -r bot/requirements.txt
+```
+
+В корневом `.env` должен быть `BOT_TOKEN`. Не добавляйте секреты в Git.
+Необязательная настройка `BACKEND_URL` по умолчанию равна `http://127.0.0.1:8000`.
+Для локального backend задайте `TMDB_READ_ACCESS_TOKEN` в `backend/.env`
+или в переменных окружения. Бот не использует токен TMDB.
+
+Первый терминал — backend:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload
+```
+
+Откройте http://127.0.0.1:8000/health и http://127.0.0.1:8000/docs.
+В Swagger выполните GET /api/v1/movies/search с query=Интерстеллар.
+Ответ /health не проверяет соединение с TMDB.
+
+Второй терминал — бот:
+
+```powershell
+.\.venv\Scripts\python.exe -m bot.main
+```
+
+Проверка: /start → «🔎 Поиск фильма» → название.
+На этом этапе выводится первая страница текстом, до 20 фильмов.
+После пустой выдачи или ошибки можно повторить ввод; /cancel возвращает в меню.
+Выбор фильма, карточки и пагинация будут следующим этапом.
+
+Тесты HTTP-клиента не требуют сервера, Telegram и токенов:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_bot_api.py -v
+```
