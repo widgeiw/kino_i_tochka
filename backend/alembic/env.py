@@ -5,16 +5,19 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from app.core.database import Base
-from app.models import *
-from app.core.config import DATABASE_URL
+from backend.app.core.database import Base
+from backend.app.models import User, Movie, UserMovie, Review
+from backend.app.core.config import DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+if DATABASE_URL is None:
+    raise ValueError("DATABASE_URL не задана")
+
 config.set_main_option(
     "sqlalchemy.url",
-    DATABASE_URL.replace("%", "%%")  # pyright: ignore[reportOptionalMemberAccess]
+    DATABASE_URL.replace("%", "%%")
 )
 
 # Interpret the config file for Python logging.
@@ -58,13 +61,10 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+    """Run migrations in online mode."""
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -73,7 +73,8 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
         )
 
         with context.begin_transaction():

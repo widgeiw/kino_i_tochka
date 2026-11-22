@@ -16,7 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from datetime import date, datetime
 
-from app.core.database import Base
+from backend.app.core.database import Base
 
 class Movie(Base):
     __tablename__ = "movies"
@@ -64,7 +64,7 @@ class Movie(Base):
         
     )
 
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
