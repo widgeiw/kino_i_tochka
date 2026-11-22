@@ -8,7 +8,9 @@ from sqlalchemy import (
     Identity, 
     Text, 
     Numeric, 
-    Date)
+    Date,
+    Index
+    )
 
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -71,4 +73,5 @@ class Movie(Base):
     __table_args__ = (
         CheckConstraint("runtime IS NULL OR runtime > 0", name="movies_runtime_check"),
         CheckConstraint("vote_average BETWEEN 0 AND 10", name="movies_vote_average_check"),
+        Index("idx_movies_title", "title"),
     )

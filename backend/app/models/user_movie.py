@@ -9,6 +9,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Identity,
     func,
+    Index
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -57,4 +58,7 @@ class UserMovie(Base):
             "movie_id",
             name="uq_user_movie",
         ),
+        Index("idx_user_movies_movie_id", "movie_id"),
+        Index("idx_user_movies_status", "status"),
+        Index("idx_user_movies_user_id", "user_id"),
     )

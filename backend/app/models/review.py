@@ -10,7 +10,8 @@ from sqlalchemy import (
     Text,
     Identity,
     func,
-)
+    Index
+    )
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -70,4 +71,12 @@ class Review(Base):
             "movie_id",
             name="uq_user_movie_review",
         ),
+        Index(
+            "idx_reviews_user_id",
+            "user_id"
+        ),
+        Index(
+            "idx_reviews_movie_id",
+            "movie_id"
+        )
     )
